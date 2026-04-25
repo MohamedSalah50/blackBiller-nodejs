@@ -1,11 +1,17 @@
+import sequelize from "./db/connection.db.js";
 import express from "express";
 import cors from "cors";
 import { rateLimit } from "express-rate-limit";
-import  sequelize  from "./db/connection.db.js";
 import "./db/models/index.js";
+import authController from "./modules/auth/auth.controller.js";
 
-const port = process.env.DB_PORT || 3000;
-const app = express(); 
+const port = process.env.PORT;
+const app = express();
+
+//db
+sequelize.authenticate()
+  .then(() => console.log('DB connected ✅'))
+  .catch(err => console.error('DB connection failed:', err.message));
 
 async function bootstrap() {
   //convert buffer data
@@ -14,15 +20,12 @@ async function bootstrap() {
   //cors
   app.use(cors());
 
-  //db
-  
-  console.log("DB connected ✅");
-  await sequelize.sync();
-
   //routes
   app.get("/", (req, res) => {
     res.send("Hello World!");
   });
+
+  app.use("/api/auth", authController);
 
   app.all("{/*dummy}", (req, res) => {
     res.status(404).json({ message: "in-valid app routing" });

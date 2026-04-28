@@ -21,7 +21,7 @@ export const register = async (req, res) => {
     const hashed = await bcrypt.hash(password, 12);
 
     const user = await User.create({
-      role_id: 4, // default role
+      // role_id: 4, // default role
       full_name,
       email,
       mobile,
@@ -124,4 +124,58 @@ export const logout = async (req, res) => {
   return res
     .status(200)
     .json({ status: true, message: "Logged out successfully" });
+};
+
+export const getProfile = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      include: [{ model: UserRole, as: "role" }],
+    });
+
+    return res.status(200).json({ status: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const user = await User.scope("withSecret").findByPk(req.user.id);
+
+    if (req.body.password) {
+      req.body.password = await bcrypt.hash(req.body.password, 12);
+    }
+
+    // حذف password_confirmation عشان مش column في الـ DB
+    delete req.body.password_confirmation;
+
+    await user.update(req.body);
+    await user.reload();
+
+    user.password = undefined;
+
+    return res.status(200).json({
+      status: true,
+      message: "Profile updated successfully",
+      data: user,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const statusUpdate = async (req, res, next) => {
+  try {
+    const user = await User.scope("withSecret").findByPk(req.user.id);
+
+    await user.update({ status: req.body.status });
+
+    return res.status(200).json({
+      status: true,
+      message: `User status updated to ${req.body.status}`,
+      user_id: user.id,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
